@@ -29,3 +29,10 @@ def get_random_eraser(p=0.5, s_l=0.02, s_h=0.4, r_1=0.3, r_2=1/0.3, v_l=0, v_h=2
         return input_img
 
     return eraser
+
+def standard_scaling(X_train, X_test):
+    X_train_mean = np.mean(X_train, axis=(0,1,2))
+    X_train_std = np.std(X_train, axis=(0,1,2))
+    X_train = (X_train - X_train_mean) / X_train_std
+    X_test = (X_test - X_train_mean) / X_train_std
+    return X_train, X_test
