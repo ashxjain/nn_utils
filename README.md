@@ -9,4 +9,5 @@ Utility functions required for building and training Neural Networks
 
 ### Visualize
 * `show_image`: Display single image using matplotlib
-
+* `plot_model_history`: Plots model accuracy and loss increasing number of epochs
+* `current_accuracy`: Calculates accuracy of the model for existing weights
