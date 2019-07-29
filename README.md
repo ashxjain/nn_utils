@@ -14,3 +14,5 @@ Utility functions required for building and training Neural Networks
 
 ### LR Utils (Learning Rate)
 * `LR_Finder`: Calculate optimal LR based on multiple iterations
+* `OneCycleLR`: Implementation of One-Cycle Learning Rate
+  * Source: https://github.com/titu1994/keras-one-cycle
