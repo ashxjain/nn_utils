@@ -36,3 +36,15 @@ def standard_scaling(X_train, X_test):
     X_train = (X_train - X_train_mean) / X_train_std
     X_test = (X_test - X_train_mean) / X_train_std
     return X_train, X_test
+
+def random_pad_crop(img, pad_size):
+    # Note: image_data_format is 'channel_last'
+    assert img.shape[2] == 3
+
+    shape = img.shape
+    x = np.pad(img, ((pad_size, pad_size), (pad_size, pad_size), (0, 0)), mode='reflect')
+    height, width = x.shape[0], x.shape[1]
+    dy, dx = shape[0], shape[1]
+    x = np.random.randint(0, width - dx + 1)
+    y = np.random.randint(0, height - dy + 1)
+    return img[y:(y+dy), x:(x+dx), :]
