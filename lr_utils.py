@@ -77,6 +77,7 @@ class OneCycleLR(Callback):
                  scale_percentage=None,
                  maximum_momentum=0.95,
                  minimum_momentum=0.85,
+                 batch_size=None,
                  verbose=True):
         """ This callback implements a cyclical learning rate policy (CLR).
         This is a special case of Cyclic Learning Rates, where we have only 1 cycle.
@@ -130,7 +131,7 @@ class OneCycleLR(Callback):
         self.history = {}
 
         self.epochs = None
-        self.batch_size = None
+        self.batch_size = batch_size
         self.samples = None
         self.steps = None
         self.num_iterations = None
@@ -209,7 +210,8 @@ class OneCycleLR(Callback):
         logs = logs or {}
 
         self.epochs = self.params['epochs']
-        self.batch_size = self.params['batch_size']
+        if not self.batch_size:
+            self.batch_size = self.params['batch_size']
         self.samples = self.params['samples']
         self.steps = self.params['steps']
 
