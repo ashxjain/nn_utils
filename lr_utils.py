@@ -158,7 +158,7 @@ class OneCycleLR(Callback):
 
         return warmup_lr
 
-    def compute_slanted_lr(self):
+    def compute_lr(self):
         """
         Compute the learning rate based on which phase of the cycle it is in.
 
@@ -194,6 +194,13 @@ class OneCycleLR(Callback):
 
         return new_lr
 
+    def warmup_momentum(self):
+        if self.clr_iterations >= self.warmup_steps:
+            return self.max_momentum
+        new_momentum = self.max_momentum - (self.clr_iterations / self.warmup_steps) * (self.max_momentum - self.min_momentum)
+
+        return new_momentum
+
     def compute_momentum(self):
         """
          Compute the momentum based on which phase of the cycle it is in.
@@ -206,17 +213,18 @@ class OneCycleLR(Callback):
         # Returns:
             the new momentum value
         """
-        if self.clr_iterations > 2 * self.mid_cycle_id:
+        sl_cycle_len = int(self.mid_cycle_id * 2)
+        sl_cycle_peak = sl_cycle_len * self.sl_frac
+        if self.clr_iterations >  sl_cycle_len:
             new_momentum = self.max_momentum
 
-        elif self.clr_iterations > self.mid_cycle_id:
-            current_percentage = 1. - ((self.clr_iterations - self.mid_cycle_id) / float(
-                                        self.mid_cycle_id))
+        elif self.clr_iterations > sl_cycle_peak:
+            current_percentage = 1. - (self.clr_iterations - sl_cycle_peak) / (sl_cycle_len - sl_cycle_peak)
             new_momentum = self.max_momentum - current_percentage * (
                 self.max_momentum - self.min_momentum)
 
         else:
-            current_percentage = self.clr_iterations / float(self.mid_cycle_id)
+            current_percentage = self.clr_iterations / float(sl_cycle_peak)
             new_momentum = self.max_momentum - current_percentage * (
                 self.max_momentum - self.min_momentum)
 
@@ -240,8 +248,6 @@ class OneCycleLR(Callback):
         self._reset()
         if self.warmup_steps > 0:
             K.set_value(self.model.optimizer.lr, self.warmup_lr())
-        if self.sl_frac:
-            K.set_value(self.model.optimizer.lr, self.compute_slanted_lr())
         else:
             K.set_value(self.model.optimizer.lr, self.compute_lr())
 
@@ -249,15 +255,18 @@ class OneCycleLR(Callback):
             if not hasattr(self.model.optimizer, 'momentum'):
                 raise ValueError("Momentum can be updated only on SGD optimizer !")
 
-            new_momentum = self.compute_momentum()
+            if self.warmup_steps > 0:
+                new_momentum = self.warmup_momentum()
+            else:
+                new_momentum = self.compute_momentum()
             K.set_value(self.model.optimizer.momentum, new_momentum)
 
     def on_batch_end(self, epoch, logs=None):
         logs = logs or {}
 
         self.clr_iterations += 1
-        if self.sl_frac:
-            new_lr = self.compute_slanted_lr()
+        if self.warmup_steps > 0:
+            new_lr = self.warmup_lr()
         else:
             new_lr = self.compute_lr()
 
@@ -269,7 +278,10 @@ class OneCycleLR(Callback):
             if not hasattr(self.model.optimizer, 'momentum'):
                 raise ValueError("Momentum can be updated only on SGD optimizer !")
 
-            new_momentum = self.compute_momentum()
+            if self.warmup_steps > 0:
+                new_momentum = self.warmup_momentum()
+            else:
+                new_momentum = self.compute_momentum()
 
             self.history.setdefault('momentum', []).append(
                 K.get_value(self.model.optimizer.momentum))
