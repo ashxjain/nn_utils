@@ -239,29 +239,20 @@ class OneCycleLR(Callback):
         self.mid_cycle_id = int(self.num_iterations * ((1. - self.end_percentage)) / float(2))
 
         self._reset()
-        if self.warmup_steps > 0:
-            K.set_value(self.model.optimizer.lr, self.warmup_lr())
-        else:
-            K.set_value(self.model.optimizer.lr, self.compute_lr())
+        K.set_value(self.model.optimizer.lr, self.compute_lr())
 
         if self._update_momentum:
             if not hasattr(self.model.optimizer, 'momentum'):
                 raise ValueError("Momentum can be updated only on SGD optimizer !")
 
-            if self.warmup_steps > 0:
-                new_momentum = self.warmup_momentum()
-            else:
-                new_momentum = self.compute_momentum()
+            new_momentum = self.compute_momentum()
             K.set_value(self.model.optimizer.momentum, new_momentum)
 
     def on_batch_end(self, epoch, logs=None):
         logs = logs or {}
 
         self.clr_iterations += 1
-        if self.warmup_steps > 0:
-            new_lr = self.warmup_lr()
-        else:
-            new_lr = self.compute_lr()
+        new_lr = self.compute_lr()
 
         self.history.setdefault('lr', []).append(
             K.get_value(self.model.optimizer.lr))
@@ -271,10 +262,7 @@ class OneCycleLR(Callback):
             if not hasattr(self.model.optimizer, 'momentum'):
                 raise ValueError("Momentum can be updated only on SGD optimizer !")
 
-            if self.warmup_steps > 0:
-                new_momentum = self.warmup_momentum()
-            else:
-                new_momentum = self.compute_momentum()
+            new_momentum = self.compute_momentum()
 
             self.history.setdefault('momentum', []).append(
                 K.get_value(self.model.optimizer.momentum))
