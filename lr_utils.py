@@ -170,10 +170,10 @@ class OneCycleLR(Callback):
             the new learning rate
         """
 
-        if self.clr_iterations <= self.warmup_linear_steps:
+        if self.clr_iterations > 0 and self.clr_iterations <= self.warmup_linear_steps:
             return self.initial_lr * (self.clr_iterations / self.warmup_linear_steps)
 
-        if self.clr_iterations <= self.warmup_constant_steps:
+        if self.clr_iterations > 0 and self.clr_iterations <= self.warmup_constant_steps:
             return self.initial_lr
 
         sl_cycle_len = int(self.mid_cycle_id * 2)
