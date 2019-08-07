@@ -78,7 +78,8 @@ class OneCycleLR(Callback):
                  maximum_momentum=0.95,
                  minimum_momentum=0.85,
                  sl_frac=0.5,
-                 warmup_steps=0,
+                 warmup_linear_steps=0,
+                 warmup_constant_steps=0,
                  batch_size=None,
                  verbose=True):
         """ This callback implements a cyclical learning rate policy (CLR).
@@ -106,8 +107,9 @@ class OneCycleLR(Callback):
                 epoch.
             sl_frac: Float. Used for Slanted Triangular LR. With default 0.5, it
                 has mid-cycle at 50%
-            warmup_steps: Int. Number of interations for which LR will be increased
+            warmup_linear_steps: Int. Number of interations for which LR will be increased
                 linearly
+            warmup_constant_steps: Int. Number of interations for which LR will be constant
 
         # Reference
             - [A disciplined approach to neural network hyper-parameters: Part 1 -- learning rate, batch size, weight_decay, and weight decay](https://arxiv.org/abs/1803.09820)
@@ -120,6 +122,9 @@ class OneCycleLR(Callback):
 
         if scale_percentage is not None and (scale_percentage < 0. or scale_percentage > 1.):
             raise ValueError("`scale_percentage` must be between 0 and 1")
+
+        if warmup_linear_steps > 0 and warmup_constant_steps > 0:
+            raise ValueError("specify only one warmup strategy to use")
 
         self.initial_lr = max_lr
         self.end_percentage = end_percentage
@@ -142,7 +147,8 @@ class OneCycleLR(Callback):
         self.num_iterations = None
         self.mid_cycle_id = None
         self.sl_frac = sl_frac
-        self.warmup_steps = warmup_steps
+        self.warmup_linear_steps = warmup_linear_steps
+        self.warmup_constant_steps = warmup_constant_steps
 
     def _reset(self):
         """
@@ -164,8 +170,11 @@ class OneCycleLR(Callback):
             the new learning rate
         """
 
-        if self.clr_iterations < self.warmup_steps:
-            return self.initial_lr * (self.clr_iterations / self.warmup_steps)
+        if self.clr_iterations < self.warmup_linear_steps:
+            return self.initial_lr * (self.clr_iterations / self.warmup_linear_steps)
+
+        if self.clr_iterations < self.warmup_constant_steps:
+            return self.initial_lr
 
         sl_cycle_len = int(self.mid_cycle_id * 2)
         sl_cycle_peak = sl_cycle_len * self.sl_frac
@@ -187,7 +196,8 @@ class OneCycleLR(Callback):
 
         if self.clr_iterations == self.num_iterations:
             self.clr_iterations = 0
-            self.warmup_steps = 0
+            self.warmup_linear_steps = 0
+            self.warmup_constant_steps = 0
 
         return new_lr
 
@@ -204,8 +214,11 @@ class OneCycleLR(Callback):
             the new momentum value
         """
 
-        if self.clr_iterations < self.warmup_steps:
-            return self.max_momentum - (self.clr_iterations / self.warmup_steps) * (self.max_momentum - self.min_momentum)
+        if self.clr_iterations < self.warmup_linear_steps:
+            return self.max_momentum - (self.clr_iterations / self.warmup_linear_steps) * (self.max_momentum - self.min_momentum)
+
+        if self.clr_iterations < self.warmup_constant_steps:
+            return self.min_momentum
 
         sl_cycle_len = int(self.mid_cycle_id * 2)
         sl_cycle_peak = sl_cycle_len * self.sl_frac
@@ -233,7 +246,7 @@ class OneCycleLR(Callback):
         self.steps = self.params['steps']
 
         if self.steps is not None:
-            self.num_iterations = self.epochs * self.steps - self.warmup_steps
+            self.num_iterations = self.epochs * self.steps - self.warmup_linear_steps - self.warmup_constant_steps
         else:
             raise ValueError("steps is required")
 
