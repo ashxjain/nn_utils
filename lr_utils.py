@@ -77,6 +77,8 @@ class OneCycleLR(Callback):
                  scale_percentage=None,
                  maximum_momentum=0.95,
                  minimum_momentum=0.85,
+                 sl_frac=0.5,
+                 warmup_steps=0,
                  batch_size=None,
                  verbose=True):
         """ This callback implements a cyclical learning rate policy (CLR).
@@ -102,6 +104,10 @@ class OneCycleLR(Callback):
                 the half-cycle. Can only be used with SGD Optimizer.
             verbose: Bool. Whether to print the current learning rate after every
                 epoch.
+            sl_frac: Float. Used for Slanted Triangular LR. With default 0.5, it
+                has mid-cycle at 50%
+            warmup_steps: Int. Number of interations for which LR will be increased
+                linearly
 
         # Reference
             - [A disciplined approach to neural network hyper-parameters: Part 1 -- learning rate, batch size, weight_decay, and weight decay](https://arxiv.org/abs/1803.09820)
@@ -135,6 +141,8 @@ class OneCycleLR(Callback):
         self.steps = None
         self.num_iterations = None
         self.mid_cycle_id = None
+        self.sl_frac = sl_frac
+        self.warmup_steps = warmup_steps
 
     def _reset(self):
         """
@@ -143,7 +151,14 @@ class OneCycleLR(Callback):
         self.clr_iterations = 0.
         self.history = {}
 
-    def compute_lr(self):
+    def warmup_lr(self):
+        if self.clr_iterations >= self.warmup_steps:
+            return self.initial_lr
+        warmup_lr = self.initial_lr * (self.clr_iterations / self.warmup_steps)
+
+        return warmup_lr
+
+    def compute_slanted_lr(self):
         """
         Compute the learning rate based on which phase of the cycle it is in.
 
@@ -155,20 +170,22 @@ class OneCycleLR(Callback):
         # Returns:
             the new learning rate
         """
-        if self.clr_iterations > 2 * self.mid_cycle_id:
-            current_percentage = (self.clr_iterations - 2 * self.mid_cycle_id)
-            current_percentage /= float((self.num_iterations - 2 * self.mid_cycle_id))
+
+        sl_cycle_len = int(self.mid_cycle_id * 2)
+        sl_cycle_peak = sl_cycle_len * self.sl_frac
+        if self.clr_iterations > sl_cycle_len:
+            current_percentage = (self.clr_iterations - sl_cycle_len)
+            current_percentage /= float((self.num_iterations - sl_cycle_len))
             new_lr = self.initial_lr * (1. + (current_percentage *
                                               (1. - 100.) / 100.)) * self.scale
 
-        elif self.clr_iterations > self.mid_cycle_id:
-            current_percentage = 1. - (
-                self.clr_iterations - self.mid_cycle_id) / self.mid_cycle_id
+        elif self.clr_iterations > sl_cycle_peak:
+            current_percentage = 1. - (self.clr_iterations - sl_cycle_peak) / (sl_cycle_len - sl_cycle_peak)
             new_lr = self.initial_lr * (1. + current_percentage *
                                         (self.scale * 100 - 1.)) * self.scale
 
         else:
-            current_percentage = self.clr_iterations / self.mid_cycle_id
+            current_percentage = self.clr_iterations / sl_cycle_peak
             new_lr = self.initial_lr * (1. + current_percentage *
                                         (self.scale * 100 - 1.)) * self.scale
 
@@ -214,14 +231,19 @@ class OneCycleLR(Callback):
         self.steps = self.params['steps']
 
         if self.steps is not None:
-            self.num_iterations = self.epochs * self.steps
+            self.num_iterations = self.epochs * self.steps - self.warmup_steps
         else:
             raise ValueError("steps is required")
 
         self.mid_cycle_id = int(self.num_iterations * ((1. - self.end_percentage)) / float(2))
 
         self._reset()
-        K.set_value(self.model.optimizer.lr, self.compute_lr())
+        if self.warmup_steps > 0:
+            K.set_value(self.model.optimizer.lr, self.warmup_lr())
+        if self.sl_frac:
+            K.set_value(self.model.optimizer.lr, self.compute_slanted_lr())
+        else:
+            K.set_value(self.model.optimizer.lr, self.compute_lr())
 
         if self._update_momentum:
             if not hasattr(self.model.optimizer, 'momentum'):
@@ -234,7 +256,10 @@ class OneCycleLR(Callback):
         logs = logs or {}
 
         self.clr_iterations += 1
-        new_lr = self.compute_lr()
+        if self.sl_frac:
+            new_lr = self.compute_slanted_lr()
+        else:
+            new_lr = self.compute_lr()
 
         self.history.setdefault('lr', []).append(
             K.get_value(self.model.optimizer.lr))
