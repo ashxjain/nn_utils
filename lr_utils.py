@@ -170,10 +170,10 @@ class OneCycleLR(Callback):
             the new learning rate
         """
 
-        if self.clr_iterations < self.warmup_linear_steps:
+        if self.clr_iterations <= self.warmup_linear_steps:
             return self.initial_lr * (self.clr_iterations / self.warmup_linear_steps)
 
-        if self.clr_iterations < self.warmup_constant_steps:
+        if self.clr_iterations <= self.warmup_constant_steps:
             return self.initial_lr
 
         sl_cycle_len = int(self.mid_cycle_id * 2)
@@ -246,7 +246,7 @@ class OneCycleLR(Callback):
         self.steps = self.params['steps']
 
         if self.steps is not None:
-            self.num_iterations = self.epochs * self.steps - self.warmup_linear_steps - self.warmup_constant_steps
+            self.num_iterations = self.epochs * self.steps
         else:
             raise ValueError("steps is required")
 
