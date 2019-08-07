@@ -151,13 +151,6 @@ class OneCycleLR(Callback):
         self.clr_iterations = 0.
         self.history = {}
 
-    def warmup_lr(self):
-        if self.clr_iterations >= self.warmup_steps:
-            return self.initial_lr
-        warmup_lr = self.initial_lr * (self.clr_iterations / self.warmup_steps)
-
-        return warmup_lr
-
     def compute_lr(self):
         """
         Compute the learning rate based on which phase of the cycle it is in.
@@ -170,6 +163,9 @@ class OneCycleLR(Callback):
         # Returns:
             the new learning rate
         """
+
+        if self.clr_iterations < self.warmup_steps:
+            return self.initial_lr * (self.clr_iterations / self.warmup_steps)
 
         sl_cycle_len = int(self.mid_cycle_id * 2)
         sl_cycle_peak = sl_cycle_len * self.sl_frac
@@ -194,13 +190,6 @@ class OneCycleLR(Callback):
 
         return new_lr
 
-    def warmup_momentum(self):
-        if self.clr_iterations >= self.warmup_steps:
-            return self.max_momentum
-        new_momentum = self.max_momentum - (self.clr_iterations / self.warmup_steps) * (self.max_momentum - self.min_momentum)
-
-        return new_momentum
-
     def compute_momentum(self):
         """
          Compute the momentum based on which phase of the cycle it is in.
@@ -213,6 +202,10 @@ class OneCycleLR(Callback):
         # Returns:
             the new momentum value
         """
+
+        if self.clr_iterations < self.warmup_steps:
+            return self.max_momentum - (self.clr_iterations / self.warmup_steps) * (self.max_momentum - self.min_momentum)
+
         sl_cycle_len = int(self.mid_cycle_id * 2)
         sl_cycle_peak = sl_cycle_len * self.sl_frac
         if self.clr_iterations >  sl_cycle_len:
