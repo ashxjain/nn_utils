@@ -169,7 +169,7 @@ class OneCycleLR(Callback):
 
         sl_cycle_len = int(self.mid_cycle_id * 2)
         sl_cycle_peak = sl_cycle_len * self.sl_frac
-        if self.clr_iterations > sl_cycle_len:
+        if self.clr_iterations >= sl_cycle_len:
             current_percentage = (self.clr_iterations - sl_cycle_len)
             current_percentage /= float((self.num_iterations - sl_cycle_len))
             new_lr = self.initial_lr * (1. + (current_percentage *
@@ -208,7 +208,7 @@ class OneCycleLR(Callback):
 
         sl_cycle_len = int(self.mid_cycle_id * 2)
         sl_cycle_peak = sl_cycle_len * self.sl_frac
-        if self.clr_iterations >  sl_cycle_len:
+        if self.clr_iterations >= sl_cycle_len:
             new_momentum = self.max_momentum
 
         elif self.clr_iterations > sl_cycle_peak:
