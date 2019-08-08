@@ -1,10 +1,10 @@
 from matplotlib import pyplot as plt
-from keras.callbacks import Callback
+from tensorflow.keras.callbacks import Callback
 
 import os
 import numpy as np
 import warnings
-import keras.backend as K
+import tensorflow.keras.backend as K
 
 class LR_Finder(Callback):
     
