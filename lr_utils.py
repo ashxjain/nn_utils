@@ -74,7 +74,7 @@ class OneCycleLR(Callback):
     def __init__(self,
                  max_lr,
                  end_percentage=0.1,
-                 scale_percentage=None,
+                 scale_percentage=0.1,
                  maximum_momentum=0.95,
                  minimum_momentum=0.85,
                  sl_frac=0.5,
@@ -145,7 +145,6 @@ class OneCycleLR(Callback):
         self.batch_size = batch_size
         self.steps = None
         self.num_iterations = None
-        self.mid_cycle_id = None
         self.sl_frac = sl_frac
         self.warmup_linear_steps = warmup_linear_steps
         self.warmup_constant_steps = warmup_constant_steps
@@ -176,7 +175,7 @@ class OneCycleLR(Callback):
         if self.clr_iterations > 0 and self.clr_iterations <= self.warmup_constant_steps:
             return self.initial_lr
 
-        sl_cycle_len = int(self.mid_cycle_id * 2)
+        sl_cycle_len = int(self.num_iterations * ((1. - self.end_percentage)))
         sl_cycle_peak = sl_cycle_len * self.sl_frac
         if self.clr_iterations > sl_cycle_len:
             current_percentage = (self.clr_iterations - sl_cycle_len)
@@ -220,7 +219,7 @@ class OneCycleLR(Callback):
         if self.clr_iterations < self.warmup_constant_steps:
             return self.min_momentum
 
-        sl_cycle_len = int(self.mid_cycle_id * 2)
+        sl_cycle_len = int(self.num_iterations * ((1. - self.end_percentage)))
         sl_cycle_peak = sl_cycle_len * self.sl_frac
         if self.clr_iterations > sl_cycle_len:
             new_momentum = self.max_momentum
@@ -249,8 +248,6 @@ class OneCycleLR(Callback):
             self.num_iterations = self.epochs * self.steps
         else:
             raise ValueError("steps is required")
-
-        self.mid_cycle_id = int(self.num_iterations * ((1. - self.end_percentage)) / float(2))
 
         self._reset()
         K.set_value(self.model.optimizer.lr, self.compute_lr())
