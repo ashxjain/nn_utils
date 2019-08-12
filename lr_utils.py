@@ -128,7 +128,7 @@ class OneCycleLR(Callback):
         if warmup_linear_steps > 0 and warmup_constant_steps > 0:
             raise ValueError("specify only one warmup strategy to use")
 
-        if self.sl_frac and self.sl_epoch:
+        if sl_frac and sl_epoch:
             raise ValueError("specify only one slant value type")
 
         self.initial_lr = max_lr
