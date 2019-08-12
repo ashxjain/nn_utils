@@ -77,7 +77,8 @@ class OneCycleLR(Callback):
                  scale_percentage=0.1,
                  maximum_momentum=0.95,
                  minimum_momentum=0.85,
-                 sl_frac=0.5,
+                 sl_frac=None,
+                 sl_epoch=None,
                  warmup_linear_steps=0,
                  warmup_constant_steps=0,
                  batch_size=None,
@@ -107,6 +108,7 @@ class OneCycleLR(Callback):
                 epoch.
             sl_frac: Float. Used for Slanted Triangular LR. With default 0.5, it
                 has mid-cycle at 50%
+            sl_epoch: Int. Used for Slanted Triangular LR. It defines slant peak
             warmup_linear_steps: Int. Number of interations for which LR will be increased
                 linearly
             warmup_constant_steps: Int. Number of interations for which LR will be constant
@@ -125,6 +127,9 @@ class OneCycleLR(Callback):
 
         if warmup_linear_steps > 0 and warmup_constant_steps > 0:
             raise ValueError("specify only one warmup strategy to use")
+
+        if self.sl_frac and self.sl_epoch:
+            raise ValueError("specify only one slant value type")
 
         self.initial_lr = max_lr
         self.end_percentage = end_percentage
@@ -146,6 +151,7 @@ class OneCycleLR(Callback):
         self.steps = None
         self.num_iterations = None
         self.sl_frac = sl_frac
+        self.sl_epoch = sl_epoch
         self.warmup_linear_steps = warmup_linear_steps
         self.warmup_constant_steps = warmup_constant_steps
 
@@ -176,7 +182,12 @@ class OneCycleLR(Callback):
             return self.initial_lr
 
         sl_cycle_len = int(self.num_iterations * ((1. - self.end_percentage)))
-        sl_cycle_peak = sl_cycle_len * self.sl_frac
+        if self.sl_frac:
+            sl_cycle_peak = sl_cycle_len * self.sl_frac
+        elif self.sl_epoch:
+            sl_cycle_peak = self.sl_epoch * self.steps
+        else:
+            sl_cycle_peak = sl_cycle_len * 0.5
         if self.clr_iterations > sl_cycle_len:
             current_percentage = (self.clr_iterations - sl_cycle_len)
             current_percentage /= float((self.num_iterations - sl_cycle_len))
@@ -220,7 +231,12 @@ class OneCycleLR(Callback):
             return self.min_momentum
 
         sl_cycle_len = int(self.num_iterations * ((1. - self.end_percentage)))
-        sl_cycle_peak = sl_cycle_len * self.sl_frac
+        if self.sl_frac:
+            sl_cycle_peak = sl_cycle_len * self.sl_frac
+        elif self.sl_epoch:
+            sl_cycle_peak = self.sl_epoch * self.steps
+        else:
+            sl_cycle_peak = sl_cycle_len * 0.5
         if self.clr_iterations > sl_cycle_len:
             new_momentum = self.max_momentum
 
