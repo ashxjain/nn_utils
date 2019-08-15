@@ -73,14 +73,11 @@ class LR_Finder(Callback):
 class OneCycleLR(Callback):
     def __init__(self,
                  max_lr,
-                 end_percentage=0.1,
-                 scale_percentage=0.1,
+                 min_lr,
+                 end_epoch=4,
                  maximum_momentum=0.95,
                  minimum_momentum=0.85,
-                 sl_frac=None,
-                 sl_epoch=None,
-                 warmup_linear_steps=0,
-                 warmup_constant_steps=0,
+                 sl_epoch=12,
                  batch_size=None,
                  verbose=True):
         """ This callback implements a cyclical learning rate policy (CLR).
@@ -106,12 +103,7 @@ class OneCycleLR(Callback):
                 the half-cycle. Can only be used with SGD Optimizer.
             verbose: Bool. Whether to print the current learning rate after every
                 epoch.
-            sl_frac: Float. Used for Slanted Triangular LR. With default 0.5, it
-                has mid-cycle at 50%
             sl_epoch: Int. Used for Slanted Triangular LR. It defines slant peak
-            warmup_linear_steps: Int. Number of interations for which LR will be increased
-                linearly
-            warmup_constant_steps: Int. Number of interations for which LR will be constant
 
         # Reference
             - [A disciplined approach to neural network hyper-parameters: Part 1 -- learning rate, batch size, weight_decay, and weight decay](https://arxiv.org/abs/1803.09820)
@@ -119,21 +111,9 @@ class OneCycleLR(Callback):
         """
         super(OneCycleLR, self).__init__()
 
-        if end_percentage < 0. or end_percentage > 1.:
-            raise ValueError("`end_percentage` must be between 0 and 1")
-
-        if scale_percentage is not None and (scale_percentage < 0. or scale_percentage > 1.):
-            raise ValueError("`scale_percentage` must be between 0 and 1")
-
-        if warmup_linear_steps > 0 and warmup_constant_steps > 0:
-            raise ValueError("specify only one warmup strategy to use")
-
-        if sl_frac and sl_epoch:
-            raise ValueError("specify only one slant value type")
-
-        self.initial_lr = max_lr
-        self.end_percentage = end_percentage
-        self.scale = float(scale_percentage) if scale_percentage is not None else float(end_percentage)
+        self.max_lr = float(max_lr)
+        self.min_lr = float(min_lr)
+        self.end_epoch = end_epoch
         self.max_momentum = maximum_momentum
         self.min_momentum = minimum_momentum
         self.verbose = verbose
@@ -150,10 +130,7 @@ class OneCycleLR(Callback):
         self.batch_size = batch_size
         self.steps = None
         self.num_iterations = None
-        self.sl_frac = sl_frac
         self.sl_epoch = sl_epoch
-        self.warmup_linear_steps = warmup_linear_steps
-        self.warmup_constant_steps = warmup_constant_steps
 
     def _reset(self):
         """
@@ -175,39 +152,21 @@ class OneCycleLR(Callback):
             the new learning rate
         """
 
-        if self.clr_iterations > 0 and self.clr_iterations <= self.warmup_linear_steps:
-            return self.initial_lr * (self.clr_iterations / self.warmup_linear_steps)
-
-        if self.clr_iterations > 0 and self.clr_iterations <= self.warmup_constant_steps:
-            return self.initial_lr
-
-        sl_cycle_len = int(self.num_iterations * ((1. - self.end_percentage)))
-        if self.sl_frac:
-            sl_cycle_peak = sl_cycle_len * self.sl_frac
-        elif self.sl_epoch:
-            sl_cycle_peak = self.sl_epoch * self.steps
+        cycle_len = int(self.num_iterations - (self.end_epoch * self.steps))
+        cycle_peak = self.sl_epoch * self.steps
+        end_lr = (1./100.) * self.min_lr
+        if self.clr_iterations > cycle_len:
+            current_percentage = (self.clr_iterations - cycle_len) / (self.num_iterations - cycle_len)
+            new_lr = self.min_lr - (current_percentage * (self.min_lr - end_lr))
+        elif self.clr_iterations > cycle_peak:
+            current_percentage = (self.clr_iterations - cycle_peak) / (cycle_len - cycle_peak)
+            new_lr = self.max_lr - (current_percentage * (self.max_lr - self.min_lr))
         else:
-            sl_cycle_peak = sl_cycle_len * 0.5
-        if self.clr_iterations > sl_cycle_len:
-            current_percentage = (self.clr_iterations - sl_cycle_len)
-            current_percentage /= float((self.num_iterations - sl_cycle_len))
-            new_lr = self.initial_lr * (1. + (current_percentage *
-                                              (1. - 100.) / 100.)) * self.scale
-
-        elif self.clr_iterations > sl_cycle_peak:
-            current_percentage = 1. - (self.clr_iterations - sl_cycle_peak) / (sl_cycle_len - sl_cycle_peak)
-            new_lr = self.initial_lr * (1. + current_percentage *
-                                        (self.scale * 100 - 1.)) * self.scale
-
-        else:
-            current_percentage = self.clr_iterations / sl_cycle_peak
-            new_lr = self.initial_lr * (1. + current_percentage *
-                                        (self.scale * 100 - 1.)) * self.scale
+            current_percentage = (self.clr_iterations) / (cycle_peak)
+            new_lr = self.min_lr + (current_percentage * (self.max_lr - self.min_lr))
 
         if self.clr_iterations == self.num_iterations:
             self.clr_iterations = 0
-            self.warmup_linear_steps = 0
-            self.warmup_constant_steps = 0
 
         return new_lr
 
@@ -224,31 +183,16 @@ class OneCycleLR(Callback):
             the new momentum value
         """
 
-        if self.clr_iterations < self.warmup_linear_steps:
-            return self.max_momentum - (self.clr_iterations / self.warmup_linear_steps) * (self.max_momentum - self.min_momentum)
-
-        if self.clr_iterations < self.warmup_constant_steps:
-            return self.min_momentum
-
-        sl_cycle_len = int(self.num_iterations * ((1. - self.end_percentage)))
-        if self.sl_frac:
-            sl_cycle_peak = sl_cycle_len * self.sl_frac
-        elif self.sl_epoch:
-            sl_cycle_peak = self.sl_epoch * self.steps
-        else:
-            sl_cycle_peak = sl_cycle_len * 0.5
-        if self.clr_iterations > sl_cycle_len:
+        cycle_len = int(self.num_iterations - (self.end_epoch * self.steps))
+        cycle_peak = self.sl_epoch * self.steps
+        if self.clr_iterations > cycle_len:
             new_momentum = self.max_momentum
-
-        elif self.clr_iterations > sl_cycle_peak:
-            current_percentage = 1. - (self.clr_iterations - sl_cycle_peak) / (sl_cycle_len - sl_cycle_peak)
-            new_momentum = self.max_momentum - current_percentage * (
-                self.max_momentum - self.min_momentum)
-
+        elif self.clr_iterations > cycle_peak:
+            current_percentage = (self.clr_iterations - cycle_peak) / (cycle_len - cycle_peak)
+            new_momentum = self.min_momentum + (current_percentage * (self.max_momentum - self.min_momentum))
         else:
-            current_percentage = self.clr_iterations / float(sl_cycle_peak)
-            new_momentum = self.max_momentum - current_percentage * (
-                self.max_momentum - self.min_momentum)
+            current_percentage = (self.clr_iterations) / (cycle_peak)
+            new_momentum = self.max_momentum - (current_percentage * (self.max_momentum - self.min_momentum))
 
         return new_momentum
 
@@ -306,3 +250,35 @@ class OneCycleLR(Callback):
 
             else:
                 print(" - lr: %0.5f " % (self.history['lr'][-1]))
+
+    def test_run(self, epochs=5, steps_per_epoch=97):
+        """
+        Visualize values of learning rate (and momentum) as a function of iteration (batch).
+        :param n_iter: a number of cycles. If None, 1000 is used.
+        """
+
+        if hasattr(self, 'clr_iterations'):
+            original_it = self.clr_iterations
+
+        self.num_iterations = epochs * steps_per_epoch
+        self.steps = steps_per_epoch
+        
+        lrs = np.zeros(shape=(self.num_iterations,))
+        moms = np.zeros_like(lrs)
+
+        for i in range(self.num_iterations):
+            self.clr_iterations = i
+            lrs[i] = self.compute_lr()
+            moms[i] = self.compute_momentum()
+        plt.figure(figsize=(10, 4))
+        plt.subplot(1, 2, 1)
+        plt.plot(lrs)
+        plt.xlabel('iterations')
+        plt.ylabel('lr')
+        plt.subplot(1, 2, 2)
+        plt.plot(moms)
+        plt.xlabel('iterations')
+        plt.ylabel('momentum')
+
+        if hasattr(self, 'current_iter'):
+            self.clr_iterations = original_it
