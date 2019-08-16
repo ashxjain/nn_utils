@@ -72,13 +72,14 @@ class LR_Finder(Callback):
 # Code is ported from https://github.com/fastai/fastai
 class OneCycleLR(Callback):
     def __init__(self,
+                 sl_epoch=12,
+                 end_epoch=4,
                  max_lr,
                  min_lr,
-                 end_epoch=4,
                  maximum_momentum=0.95,
                  minimum_momentum=0.85,
-                 sl_epoch=12,
                  batch_size=None,
+                 steps_per_epoch=None,
                  verbose=True):
         """ This callback implements a cyclical learning rate policy (CLR).
         This is a special case of Cyclic Learning Rates, where we have only 1 cycle.
@@ -86,15 +87,10 @@ class OneCycleLR(Callback):
         100th its initial lowest value.
 
         # Arguments:
-            max_lr: Float. Initial learning rate. This also sets the
-                starting learning rate (which will be 10x smaller than
-                this), and will increase to this value during the first cycle.
-            end_percentage: Float. The percentage of all the epochs of training
-                that will be dedicated to sharply decreasing the learning
-                rate after the completion of 1 cycle. Must be between 0 and 1.
-            scale_percentage: Float or None. If float, must be between 0 and 1.
-                If None, it will compute the scale_percentage automatically
-                based on the `end_percentage`.
+            sl_epoch: Int. Used for Slanted Triangular LR. It defines slant peak
+            end_epoch: Int. Number of epochs for which steep reduction is done in the end
+            max_lr: Float. Max Learning Rate it will reach
+            min_lr: Float. Min Learning Rate it will reach
             maximum_momentum: Optional. Sets the maximum momentum (initial)
                 value, which gradually drops to its lowest value in half-cycle,
                 then gradually increases again to stay constant at this max value.
@@ -103,7 +99,6 @@ class OneCycleLR(Callback):
                 the half-cycle. Can only be used with SGD Optimizer.
             verbose: Bool. Whether to print the current learning rate after every
                 epoch.
-            sl_epoch: Int. Used for Slanted Triangular LR. It defines slant peak
 
         # Reference
             - [A disciplined approach to neural network hyper-parameters: Part 1 -- learning rate, batch size, weight_decay, and weight decay](https://arxiv.org/abs/1803.09820)
@@ -128,7 +123,7 @@ class OneCycleLR(Callback):
 
         self.epochs = None
         self.batch_size = batch_size
-        self.steps = None
+        self.steps = steps_per_epoch
         self.num_iterations = None
         self.sl_epoch = sl_epoch
 
@@ -202,7 +197,8 @@ class OneCycleLR(Callback):
         self.epochs = self.params['epochs']
         if not self.batch_size:
             self.batch_size = self.params['batch_size']
-        self.steps = self.params['steps']
+        if not self.steps:
+            self.steps = self.params['steps']
 
         if self.steps is not None:
             self.num_iterations = self.epochs * self.steps
