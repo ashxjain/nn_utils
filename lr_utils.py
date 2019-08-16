@@ -74,10 +74,10 @@ class OneCycleLR(Callback):
     def __init__(self,
                  sl_epoch=12,
                  end_epoch=4,
-                 max_lr,
-                 min_lr,
                  maximum_momentum=0.95,
                  minimum_momentum=0.85,
+                 max_lr,
+                 min_lr,
                  batch_size=None,
                  steps_per_epoch=None,
                  verbose=True):
@@ -89,14 +89,14 @@ class OneCycleLR(Callback):
         # Arguments:
             sl_epoch: Int. Used for Slanted Triangular LR. It defines slant peak
             end_epoch: Int. Number of epochs for which steep reduction is done in the end
-            max_lr: Float. Max Learning Rate it will reach
-            min_lr: Float. Min Learning Rate it will reach
             maximum_momentum: Optional. Sets the maximum momentum (initial)
                 value, which gradually drops to its lowest value in half-cycle,
                 then gradually increases again to stay constant at this max value.
                 Can only be used with SGD Optimizer.
             minimum_momentum: Optional. Sets the minimum momentum at the end of
                 the half-cycle. Can only be used with SGD Optimizer.
+            max_lr: Float. Max Learning Rate it will reach
+            min_lr: Float. Min Learning Rate it will reach
             verbose: Bool. Whether to print the current learning rate after every
                 epoch.
 
