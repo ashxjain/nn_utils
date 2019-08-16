@@ -247,7 +247,7 @@ class OneCycleLR(Callback):
             else:
                 print(" - lr: %0.5f " % (self.history['lr'][-1]))
 
-    def test_run(self, epochs=5, steps_per_epoch=97):
+    def test_run(self, epochs=5):
         """
         Visualize values of learning rate (and momentum) as a function of iteration (batch).
         :param n_iter: a number of cycles. If None, 1000 is used.
@@ -256,8 +256,7 @@ class OneCycleLR(Callback):
         if hasattr(self, 'clr_iterations'):
             original_it = self.clr_iterations
 
-        self.num_iterations = epochs * steps_per_epoch
-        self.steps = steps_per_epoch
+        self.num_iterations = epochs * self.steps
         
         lrs = np.zeros(shape=(self.num_iterations,))
         moms = np.zeros_like(lrs)
