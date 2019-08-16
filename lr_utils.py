@@ -72,12 +72,12 @@ class LR_Finder(Callback):
 # Code is ported from https://github.com/fastai/fastai
 class OneCycleLR(Callback):
     def __init__(self,
+                 max_lr,
+                 min_lr,
                  sl_epoch=12,
                  end_epoch=4,
                  maximum_momentum=0.95,
                  minimum_momentum=0.85,
-                 max_lr,
-                 min_lr,
                  batch_size=None,
                  steps_per_epoch=None,
                  verbose=True):
