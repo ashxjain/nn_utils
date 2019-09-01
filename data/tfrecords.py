@@ -25,7 +25,7 @@ def get_label_names(dataset_type, data_dir):
     if not dataset_items.get(dataset_type, None):
         print("Invalid dataset_type, valid types are", ",".join(dataset_items.keys()))
         return
-    local_folder = dataset_items['local_folder']
+    local_folder = dataset_items[dataset_type]['local_folder']
     class_dict =  read_pickle_from_file(
             os.path.join(
                 os.path.join(
