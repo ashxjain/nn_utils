@@ -10,8 +10,17 @@ def show_image(img, figsize=(2, 2), annotation=None):
     if annotation:
         plt.annotate(annotation, xy=(0,0), xytext=(0,-1.2), fontsize=13)
 
-def show_misclassified(class_labels, actual, predicted, images, max_cnt=5):
-    idx, cnt = 0, 0
+def show_class_image(class_labels, images, labels, filter_class, count=5, figsize=(2, 2)):
+    cnt = 0
+    for idx in range(len(labels)):
+        if class_labels[labels[idx]] == filter_class:
+            show_image(images[idx])
+            cnt += 1
+        if cnt == count:
+            break
+
+def show_misclassified_images(class_labels, actual, predicted, images, max_cnt=5):
+    cnt = 0
     for idx in range(len(predicted)):
         i_pred, i_act = predicted[idx], actual[idx]
         if i_pred != i_act:
@@ -20,6 +29,16 @@ def show_misclassified(class_labels, actual, predicted, images, max_cnt=5):
             cnt += 1
         if cnt == max_cnt:
             return
+
+def show_misclassified_classes(class_labels, actual, predicted):
+    misclass = {}
+    for idx in range(len(predicted)):
+        i_pred, i_act = predicted[idx], actual[idx]
+        if i_pred != i_act:
+            cl = class_labels[i_act]
+            misclass[cl] = misclass.get(cl, 0) + 1
+    for k, v in misclass.items():
+        print(k, v)
 
 def plot_model_history(model_history):
     fig, axs = plt.subplots(1,2,figsize=(15,5))
