@@ -35,7 +35,7 @@ def get_label_names(dataset_type, data_dir):
                 'batches.meta'
                 )
             )
-    return class_dict['label_names']
+    return class_dict[b'label_names']
 
 def download_and_extract(data_dir, filename, download_url):
     """download dataset if not already downloaded"""
