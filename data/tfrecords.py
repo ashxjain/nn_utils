@@ -110,11 +110,11 @@ def load(dataset_type, filenames, batch_size, preprocess_fn, training=False, one
     num_classes = dataset_items[dataset_type]['num_class']
 
     def _parse_record(serialized_example):
-        features = tf.parse_single_example(
+        features = tf.io.parse_single_example(
             serialized_example,
             features={
-                'image': tf.FixedLenFeature([], tf.string),
-                'label': tf.FixedLenFeature([], tf.int64),
+                'image': tf.io.FixedLenFeature([], tf.string),
+                'label': tf.io.FixedLenFeature([], tf.int64),
             }
         )
 
