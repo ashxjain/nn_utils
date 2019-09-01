@@ -17,6 +17,7 @@ dataset_items = {
             'download_url': 'https://www.cs.toronto.edu/~kriz/cifar-10-python.tar.gz',
             'local_folder': 'cifar-10-batches-py',
             'image_shape': (32, 32, 3),
+            'num_class': 10,
             }
         }
 
@@ -100,34 +101,32 @@ def create(dataset_type, data_dir):
         convert_to_tfrecord(input_files, output_file, mode)
     print('Done!')
 
-
-IMAGE_HEIGHT = -1
-IMAGE_WIDTH = -1
-IMAGE_DEPTH = -1
-
-def parse_record(serialized_example):
-    features = tf.parse_single_example(
-        serialized_example,
-        features={
-            'image': tf.FixedLenFeature([], tf.string),
-            'label': tf.FixedLenFeature([], tf.int64),
-        }
-    )
-
-    image = tf.decode_raw(features['image'], tf.uint8)
-    image.set_shape([IMAGE_DEPTH * IMAGE_HEIGHT * IMAGE_WIDTH])
-    image = tf.reshape(image, [IMAGE_DEPTH, IMAGE_HEIGHT, IMAGE_WIDTH])
-    image = tf.cast(tf.transpose(image, [1, 2, 0]), tf.float32)
-
-    label = tf.cast(features['label'], tf.int32)
-    return image, label
-
-def load(dataset_type, filenames, batch_size, preprocess_fn, training=False):
-    global IMAGE_HEIGHT, IMAGE_WIDTH, IMAGE_DEPTH
+def load(dataset_type, filenames, batch_size, preprocess_fn, training=False, one_hot_label=True):
     if not dataset_items.get(dataset_type, None):
         print("Invalid dataset_type, valid types are", ",".join(dataset_items.keys()))
         return
-    IMAGE_HEIGHT, IMAGE_WIDTH, IMAGE_DEPTH = dataset_items[dataset_type]['image_shape']
+
+    img_height, img_width, img_depth = dataset_items[dataset_type]['image_shape']
+    num_classes = dataset_items[dataset_type]['image_shape']['num_class']
+
+    def _parse_record(serialized_example):
+        features = tf.parse_single_example(
+            serialized_example,
+            features={
+                'image': tf.FixedLenFeature([], tf.string),
+                'label': tf.FixedLenFeature([], tf.int64),
+            }
+        )
+
+        image = tf.decode_raw(features['image'], tf.uint8)
+        image.set_shape([img_depth * img_height * img_width])
+        image = tf.reshape(image, [img_depth, img_height, img_width])
+        image = tf.cast(tf.transpose(image, [1, 2, 0]), tf.float32)
+
+        label = tf.cast(features['label'], tf.int32)
+        if one_hot_label:
+            label = tf.one_hot(label, num_classes)
+        return image, label
 
     dataset = tf.data.TFRecordDataset(filenames=filenames)
 
@@ -136,7 +135,7 @@ def load(dataset_type, filenames, batch_size, preprocess_fn, training=False):
       dataset = dataset.shuffle(buffer_size=buffer_size)
 
     # Transformation
-    dataset = dataset.map(parse_record, num_parallel_calls=4)
+    dataset = dataset.map(_parse_record, num_parallel_calls=4)
     dataset = dataset.map(lambda image, label: (preprocess_fn(image, training), label))
 
     dataset = dataset.repeat()
