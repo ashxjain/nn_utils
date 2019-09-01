@@ -136,7 +136,8 @@ def load(dataset_type, filenames, batch_size, preprocess_fn, training=False, one
 
     # Transformation
     dataset = dataset.map(_parse_record, num_parallel_calls=4)
-    dataset = dataset.map(lambda image, label: (preprocess_fn(image, training), label))
+    img_shape = (img_height, img_width, img_depth)
+    dataset = dataset.map(lambda image, label: (preprocess_fn(image, img_shape, training), label))
 
     dataset = dataset.repeat()
     dataset = dataset.batch(batch_size)
