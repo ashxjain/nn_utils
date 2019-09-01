@@ -1,12 +1,25 @@
 from matplotlib import pyplot as plt
 
-def show_image(img, figsize=(2, 2)):
+def show_image(img, figsize=(2, 2), annotation=None):
     fig, ax = plt.subplots(figsize=figsize)
     ax.grid(False)
     ax.set_yticklabels([])
     ax.set_xticklabels([])
     ax.imshow(img)
     plt.imshow(img)
+    if annotation:
+        plt.annotate(annotation, xy=(0,0), xytext=(0,-1.2), fontsize=13)
+
+def show_misclassified(class_labels, actual, predicted, images, max_cnt=5):
+    idx, cnt = 0, 0
+    for idx in range(len(predicted)):
+        i_pred, i_act = predicted[idx], actual[idx]
+        if i_pred != i_act:
+            annotation = "Actual: %s, Predicted: %s" % (class_labels[i_act], class_labels[i_pred])
+            show_image(images[idx], annotation=annotation)
+            cnt += 1
+        if cnt == max_cnt:
+            return
 
 def plot_model_history(model_history):
     fig, axs = plt.subplots(1,2,figsize=(15,5))
