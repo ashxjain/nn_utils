@@ -107,7 +107,7 @@ def load(dataset_type, filenames, batch_size, preprocess_fn, training=False, one
         return
 
     img_height, img_width, img_depth = dataset_items[dataset_type]['image_shape']
-    num_classes = dataset_items[dataset_type]['image_shape']['num_class']
+    num_classes = dataset_items[dataset_type]['num_class']
 
     def _parse_record(serialized_example):
         features = tf.parse_single_example(
