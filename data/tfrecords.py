@@ -88,7 +88,7 @@ def create(dataset_type, data_dir):
     download_url = dataset_items[dataset_type]['download_url']
     local_folder = dataset_items[dataset_type]['local_folder']
     print('Download from {} and extract.'.format(download_url))
-    download_and_extract(data_dir, dataset_filename, download_url, local_folder)
+    download_and_extract(data_dir, dataset_filename, download_url)
     input_dir = os.path.join(data_dir, local_folder)
     for mode, files in sorted(file_names.items(), key=lambda item: item[0]):
         input_files = [os.path.join(input_dir, f) for f in files]
