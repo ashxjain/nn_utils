@@ -73,7 +73,7 @@ def create(dataset_type, data_dir):
     python version of the dataset
     """
     if not dataset_items.get(dataset_type, None):
-        print("Invalid dataset_type, valid types are ", ",".join(dataset_items.keys()))
+        print("Invalid dataset_type, valid types are", ",".join(dataset_items.keys()))
         return
     file_names = _get_file_names()
     create = False
@@ -125,7 +125,7 @@ def parse_record(serialized_example):
 def load(dataset_type, filenames, batch_size, preprocess_fn, training=False):
     global IMAGE_HEIGHT, IMAGE_WIDTH, IMAGE_DEPTH
     if not dataset_items.get(dataset_type, None):
-        print("Invalid dataset_type, valid types are ", ",".join(dataset_items.keys()))
+        print("Invalid dataset_type, valid types are", ",".join(dataset_items.keys()))
         return
     IMAGE_HEIGHT, IMAGE_WIDTH, IMAGE_DEPTH = dataset_items[dataset_type]['image_shape']
 

@@ -1,10 +1,12 @@
 from matplotlib import pyplot as plt
 
-def show_image(img):
-    fig = plt.figure(figsize=(8,3))
-    fig.add_subplot(1, 1, 1)
+def show_image(img, figsize=(2, 2)):
+    fig, ax = plt.subplots(figsize=figsize)
+    ax.grid(False)
+    ax.set_yticklabels([])
+    ax.set_xticklabels([])
+    ax.imshow(img)
     plt.imshow(img)
-    plt.show()
 
 def plot_model_history(model_history):
     fig, axs = plt.subplots(1,2,figsize=(15,5))
