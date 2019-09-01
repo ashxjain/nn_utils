@@ -21,8 +21,20 @@ dataset_items = {
             }
         }
 
-def get_label_names():
-    class_dict =  read_pickle_from_file('batches.meta')
+def get_label_names(dataset_type, data_dir):
+    if not dataset_items.get(dataset_type, None):
+        print("Invalid dataset_type, valid types are", ",".join(dataset_items.keys()))
+        return
+    local_folder = dataset_items['local_folder']
+    class_dict =  read_pickle_from_file(
+            os.path.join(
+                os.path.join(
+                    data_dir,
+                    local_folder
+                    ),
+                'batches.meta'
+                )
+            )
     return class_dict['label_names']
 
 def download_and_extract(data_dir, filename, download_url):
